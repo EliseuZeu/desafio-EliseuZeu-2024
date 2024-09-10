@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "jest": "^29.6.2"
+    "jest": "^29.7.0"
   },
   "dependencies": {
     "desafio-zoo": "file:"
