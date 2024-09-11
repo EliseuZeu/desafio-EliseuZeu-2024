@@ -1,103 +1,83 @@
 class RecintosZoo {
   constructor() {
-    this.recintos = [
-      new Recinto(1, "savana", 10, [new Animal("MACACO", 1, ["savana", "floresta"]), new Animal("MACACO", 1, ["savana", "floresta"])]),
-      new Recinto(2, "floresta", 5, []),
-      new Recinto(3, "savana e rio", 7, [new Animal("GAZELA", 2, ["savana"])]),
-      new Recinto(4, "rio", 8, []),
-      new Recinto(5, "savana", 9, [new Animal("LEAO", 3, ["savana"])])
-    ];
+      this.recintos = [
+          { numero: 1, bioma: "savana", tamanhoTotal: 10, animais: [{ especie: "MACACO", quantidade: 3 }] },
+          { numero: 2, bioma: "floresta", tamanhoTotal: 5, animais: [] },
+          { numero: 3, bioma: "savana e rio", tamanhoTotal: 7, animais: [{ especie: "GAZELA", quantidade: 1 }] },
+          { numero: 4, bioma: "rio", tamanhoTotal: 8, animais: [] },
+          { numero: 5, bioma: "savana", tamanhoTotal: 9, animais: [{ especie: "LEAO", quantidade: 1 }] },
+      ];
 
-    this.animaisDisponiveis = {
-      "LEAO": new Animal("LEAO", 3, ["savana"]),
-      "LEOPARDO": new Animal("LEOPARDO", 2, ["savana"]),
-      "CROCODILO": new Animal("CROCODILO", 3, ["rio"]),
-      "MACACO": new Animal("MACACO", 1, ["savana", "floresta"]),
-      "GAZELA": new Animal("GAZELA", 2, ["savana"]),
-      "HIPOPOTAMO": new Animal("HIPOPOTAMO", 4, ["savana", "rio"])
-    };
+      this.animais = {
+          LEAO: { tamanho: 3, bioma: ["savana"], carnivoro: true },
+          LEOPARDO: { tamanho: 2, bioma: ["savana"], carnivoro: true },
+          CROCODILO: { tamanho: 3, bioma: ["rio"], carnivoro: true },
+          MACACO: { tamanho: 1, bioma: ["savana", "floresta"], carnivoro: false },
+          GAZELA: { tamanho: 2, bioma: ["savana"], carnivoro: false },
+          HIPOPOTAMO: { tamanho: 4, bioma: ["savana", "rio"], carnivoro: false },
+      };
   }
 
-  // Método para analisar os recintos
-  analisaRecintos(especieAnimal, quantidade) {
-    // Valida se o animal existe
-    const animalDisponivel = this.animaisDisponiveis[especieAnimal];
-    if (!animalDisponivel) {
-      return { erro: "Animal inválido" };
-    }
+  analisaRecintos(especie, quantidade) {
+      if (!this.animais[especie]) {
+          return { erro: "Animal inválido" };
+      }
 
-    // Valida a quantidade
-    if (quantidade <= 0 || !Number.isInteger(quantidade)) {
-      return { erro: "Quantidade inválida" };
-    }
+      if (quantidade <= 0) {
+          return { erro: "Quantidade inválida" };
+      }
 
-    const espacoNecessario = animalDisponivel.tamanho * quantidade;
+      const { tamanho, bioma, carnivoro } = this.animais[especie];
+      let recintosViaveis = [];
 
-    // Filtra os recintos que podem receber o animal
-    const recintosViaveis = this.recintos
-      .filter(recinto => recinto.podeReceberAnimal(animalDisponivel))
-      .map(recinto => `Recinto ${recinto.numero} (espaço livre: ${recinto.espacoDisponivel()} total: ${recinto.tamanhoTotal})`);
+      this.recintos.forEach((recinto) => {
+          const espacoOcupado = recinto.animais.reduce((acc, animal) => {
+              const tamanhoAnimal = this.animais[animal.especie].tamanho * animal.quantidade;
+              return acc + tamanhoAnimal;
+          }, 0);
 
-    if (recintosViaveis.length === 0) {
-      return { erro: "Não há recinto viável" };
-    }
+          const espacoLivre = recinto.tamanhoTotal - espacoOcupado;
 
-    return { recintosViaveis };
-  }
-}
+          const animalCompativel = bioma.includes(recinto.bioma);
+          const carnivorosCompativeis = recinto.animais.every((animal) => {
+              return animal.especie === especie || !this.animais[animal.especie].carnivoro;
+          });
 
-class Animal {
-  constructor(especie, tamanho, biomas) {
-    this.especie = especie;
-    this.tamanho = tamanho;
-    this.biomas = biomas;
-  }
+          const espacoSuficiente = espacoLivre >= tamanho * quantidade;
+          const respeitaRegras = this.validaRegrasAdicionais(especie, quantidade, recinto, espacoLivre);
 
-  // Método para validar se um animal pertence a um bioma
-  podeHabitar(bioma) {
-    return this.biomas.includes(bioma);
-  }
+          if (animalCompativel && carnivorosCompativeis && espacoSuficiente && respeitaRegras) {
+              recintosViaveis.push(`Recinto ${recinto.numero} (espaço livre: ${espacoLivre - (tamanho * quantidade)} total: ${recinto.tamanhoTotal})`);
+          }
+      });
 
-  // Verifica se o animal é carnívoro
-  isCarnivoro() {
-    return ["LEAO", "LEOPARDO", "CROCODILO"].includes(this.especie);
-  }
-}
+      if (recintosViaveis.length === 0) {
+          return { erro: "Não há recinto viável" };
+      }
 
-class Recinto {
-  constructor(numero, bioma, tamanhoTotal, animais = []) {
-    this.numero = numero;
-    this.bioma = bioma;
-    this.tamanhoTotal = tamanhoTotal;
-    this.animais = animais;
+      return { recintosViaveis };
   }
 
-  // Verifica o espaço disponível no recinto
-  espacoDisponivel() {
-    let espacoOcupado = this.animais.reduce((acc, animal) => acc + animal.tamanho, 0);
-    return this.tamanhoTotal - espacoOcupado;
-  }
+  validaRegrasAdicionais(especie, quantidade, recinto, espacoLivre) {
+      const { tamanho } = this.animais[especie];
 
-  // Adiciona um animal ao recinto
-  adicionarAnimal(animal) {
-    if (this.espacoDisponivel() >= animal.tamanho) {
-      this.animais.push(animal);
-    } else {
-      throw new Error("Espaço insuficiente");
-    }
-  }
+      // Hipopótamo só pode coexistir com outras espécies em savana e rio
+      if (especie === "HIPOPOTAMO" && recinto.bioma !== "savana e rio" && recinto.animais.length > 0) {
+          return false;
+      }
 
-  // Verifica se o recinto pode receber o animal
-  podeReceberAnimal(animal) {
-    const espacoSuficiente = this.espacoDisponivel() >= animal.tamanho;
-    const biomaCompativel = animal.podeHabitar(this.bioma);
-    const carnivorosCompativeis = !animal.isCarnivoro() || this.animais.every(a => a.especie === animal.especie);
+      // Macaco não gosta de ficar sozinho
+      if (especie === "MACACO" && quantidade === 1 && recinto.animais.length === 0) {
+          return false;
+      }
 
-    // Verifica se o hipopótamo pode estar nesse bioma específico
-    if (animal.especie === 'HIPOPOTAMO' && this.bioma !== 'savana e rio') {
-      return false;
-    }
+      // Se houver mais de uma espécie no recinto, considerar 1 espaço extra ocupado
+      if (recinto.animais.length > 0 && espacoLivre < (tamanho * quantidade + 1)) {
+          return false;
+      }
 
-    return espacoSuficiente && biomaCompativel && carnivorosCompativeis;
+      return true;
   }
 }
+
+export { RecintosZoo as RecintosZoo };
